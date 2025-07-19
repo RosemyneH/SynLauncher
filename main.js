@@ -2,6 +2,8 @@ const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const functions = require('./functions');
 const constants = require('./constants');
+const WoWLauncher = require('./launcher');
+const PlatformUtils = require('./platform');
 const axios = require('axios');
 
 // Single instance lock
@@ -279,24 +281,47 @@ const { getPatchDownloadLink } = require('./patch_scraper');
 const { extractClient } = require('./functions');
 const fs = require('fs');
 
-const { spawn } = require('child_process');
-ipcMain.handle('launch-wowext', async (event, clientDir) => {
-  const path = require('path');
-  const fs = require('fs');
-  const exePath = path.join(clientDir, 'wowext.exe');
-  if (!fs.existsSync(exePath)) {
-    return { success: false, message: 'wowext.exe not found in ' + clientDir };
-  }
-  try {
-    spawn(exePath, [], {
-      cwd: clientDir,
-      detached: true,
-      stdio: 'ignore'
-    }).unref();
-    return { success: true };
-  } catch (err) {
-    return { success: false, message: err.message };
-  }
+// ʕ •ᴥ•ʔ✿ Cross-platform WoW launcher with Proton-GE support ✿ ʕ •ᴥ•ʔ
+ipcMain.handle('launch-wowext', async (event, clientDir, options = {}) => {
+  return await WoWLauncher.launchWoW(clientDir, options);
+});
+
+// ʕ ◕ᴥ◕ ʔ✿ Get available Proton versions for Linux users ✿ ʕ ◕ᴥ◕ ʔ
+ipcMain.handle('get-proton-versions', () => {
+  return WoWLauncher.getAvailableProtonVersions();
+});
+
+// ʕ •ᴥ•ʔ✿ Debug logging helper ✿ ʕ •ᴥ•ʔ
+ipcMain.handle('debug-log', async (event, message) => {
+  console.log('[RENDERER DEBUG]', message);
+  return true;
+});
+
+// ʕ ● ᴥ ●ʔ✿ Initialize Wine prefix for first-time Linux setup ✿ ʕ ● ᴥ ●ʔ
+ipcMain.handle('init-wine-prefix', async (event, clientDir, protonVersion) => {
+  return await WoWLauncher.initializeWinePrefix(clientDir, protonVersion);
+});
+
+// ʕノ•ᴥ•ʔノ✿ Check if running on Linux ✿ ʕノ•ᴥ•ʔノ
+ipcMain.handle('is-linux', () => {
+  return PlatformUtils.isLinux();
+});
+
+// ＼ʕ •ᴥ•ʔ／✿ Get platform information ✿ ＼ʕ •ᴥ•ʔ／
+ipcMain.handle('get-platform-info', () => {
+  return {
+    platform: process.platform,
+    isWindows: PlatformUtils.isWindows(),
+    isLinux: PlatformUtils.isLinux(),
+    isMacOS: PlatformUtils.isMacOS(),
+    configDir: PlatformUtils.getConfigDir(),
+    protonVersions: PlatformUtils.getProtonGEPaths()
+  };
+});
+
+// ʕ •ᴥ•ʔ✿ Get WoW executables for directory ✿ ʕ •ᴥ•ʔ
+ipcMain.handle('get-wow-executables', (event, clientDir) => {
+  return PlatformUtils.getWoWExecutables(clientDir);
 });
 
 ipcMain.handle('download-and-install-patch', async (event, clientDir) => {
@@ -367,7 +392,8 @@ ipcMain.handle('validate-wow-dir', (event, dir) => {
 ipcMain.handle('select-directory', async (event) => {
   const win = BrowserWindow.getFocusedWindow();
   const result = await dialog.showOpenDialog(win, {
-    properties: ['openDirectory']
+    properties: ['openDirectory'],
+    title: 'Select WoW Client Directory'
   });
   return result.filePaths;
 });

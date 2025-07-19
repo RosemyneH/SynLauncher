@@ -73,6 +73,183 @@ function showModal(message) {
   });
 }
 
+// ʕ ◕ᴥ◕ ʔ✿ Linux Settings Dialog ✿ ʕ ◕ᴥ◕ ʔ
+async function showLinuxSettings(clientDir) {
+  const platformInfo = await ipcRenderer.invoke('get-platform-info');
+  
+  let settingsHTML = `
+    <div style="max-width: 500px; padding: 20px; background: #1e2328; border-radius: 10px; color: #fff;">
+      <h3 style="margin-top: 0; color: #4CAF50;">Linux Settings</h3>
+      
+      <div style="margin-bottom: 15px;">
+        <strong>Platform:</strong> ${platformInfo.platform}<br>
+        <strong>Config Directory:</strong> ${platformInfo.configDir}
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <strong>Available Proton-GE versions:</strong><br>
+  `;
+  
+  if (platformInfo.protonVersions.length > 0) {
+    settingsHTML += '<ul style="margin: 5px 0; padding-left: 20px;">';
+    platformInfo.protonVersions.forEach(version => {
+      settingsHTML += `<li>${version.name} (${version.path})</li>`;
+    });
+    settingsHTML += '</ul>';
+  } else {
+    settingsHTML += '<span style="color: #ff6b6b;">No Proton-GE installations found!</span><br>';
+    settingsHTML += '<a href="#" id="proton-install-link" style="color: #4CAF50; cursor: pointer; pointer-events: auto; position: relative; z-index: 10001;">Install Proton-GE</a>';
+  }
+  
+  settingsHTML += `
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <button id="wine-prefix-init-btn" data-client-dir="${clientDir}" style="display: block; width: 180px; height: 40px; background: #4CAF50; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; pointer-events: auto; position: relative; z-index: 99999; font-size: 14px; font-weight: 500; text-align: center; line-height: 1; margin: 5px 0; box-sizing: border-box;">
+          Initialize Wine Prefix
+        </button>
+        <small style="display: block; margin-top: 5px; color: #aaa;">
+          Run this if you encounter issues launching WoW
+        </small>
+      </div>
+      
+
+    </div>
+  `;
+  
+  await showCustomModal(settingsHTML);
+}
+
+// ʕ ● ᴥ ●ʔ✿ Initialize Wine Prefix helper ✿ ʕ ● ᴥ ●ʔ
+async function initWinePrefix(clientDir) {
+  showStatus('Initializing Wine prefix...');
+  const result = await ipcRenderer.invoke('init-wine-prefix', clientDir);
+  showStatus(result.message);
+  if (result.success) {
+    setTimeout(() => {
+      closeModal();
+    }, 2000);
+  }
+}
+
+// ʕノ•ᴥ•ʔノ✿ Simple modal with direct button handling ✿ ʕノ•ᴥ•ʔノ
+async function showCustomModal(htmlContent) {
+  const modal = document.createElement('div');
+  modal.id = 'custom-modal';
+  modal.style.position = 'fixed';
+  modal.style.top = '0';
+  modal.style.left = '0';
+  modal.style.width = '100%';
+  modal.style.height = '100%';
+  modal.style.background = 'rgba(0,0,0,0.8)';
+  modal.style.display = 'flex';
+  modal.style.alignItems = 'center';
+  modal.style.justifyContent = 'center';
+  modal.style.zIndex = '10000';
+  modal.innerHTML = htmlContent;
+  
+  document.body.appendChild(modal);
+  
+  // ʕ •ᴥ•ʔ✿ Force button interactivity with immediate setup ✿ ʕ •ᴥ•ʔ
+  const setupButtons = async () => {
+    
+    const initBtn = document.getElementById('wine-prefix-init-btn');
+    const protonLink = document.getElementById('proton-install-link');
+    
+        // ʕ ◕ᴥ◕ ʔ✿ Close button removed - use X button in top right instead ✿ ʕ ◕ᴥ◕ ʔ
+    
+    if (initBtn) {
+      // ʕ •ᴥ•ʔ✿ Force button to be fully clickable with proper dimensions ✿ ʕ •ᴥ•ʔ
+      initBtn.style.display = 'block';
+      initBtn.style.width = '180px';
+      initBtn.style.height = '40px';
+      initBtn.style.minWidth = '180px';
+      initBtn.style.minHeight = '40px';
+      initBtn.style.pointerEvents = 'auto';
+      initBtn.style.zIndex = '99999';
+      initBtn.style.position = 'relative';
+      initBtn.style.cursor = 'pointer';
+      initBtn.style.background = '#4CAF50';
+      initBtn.style.border = 'none';
+      initBtn.style.borderRadius = '6px';
+      initBtn.style.color = 'white';
+      initBtn.style.padding = '12px 20px';
+      initBtn.style.fontSize = '14px';
+      initBtn.style.fontWeight = '500';
+      initBtn.style.textAlign = 'center';
+      initBtn.style.lineHeight = '1';
+      initBtn.style.margin = '5px 0';
+      initBtn.style.boxSizing = 'border-box';
+      
+      initBtn.addEventListener('mouseenter', () => {
+        initBtn.style.background = '#45a049';
+        initBtn.style.transform = 'scale(1.02)';
+      });
+      
+      initBtn.addEventListener('mouseleave', () => {
+        initBtn.style.background = '#4CAF50';
+        initBtn.style.transform = 'scale(1)';
+      });
+      
+      initBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const clientDir = initBtn.getAttribute('data-client-dir');
+        await initWinePrefix(clientDir);
+      });
+    }
+    
+    if (protonLink) {
+      console.log('Setting up proton link');
+      protonLink.style.pointerEvents = 'auto';
+      protonLink.style.zIndex = '10002';
+      protonLink.style.position = 'relative';
+      protonLink.style.cursor = 'pointer';
+      
+      protonLink.onmouseenter = () => {
+        protonLink.style.color = '#66bb6a';
+        protonLink.style.textDecoration = 'underline';
+        console.log('Proton link hovered');
+      };
+      protonLink.onmouseleave = () => {
+        protonLink.style.color = '#4CAF50';
+        protonLink.style.textDecoration = 'none';
+      };
+      protonLink.onclick = (e) => {
+        console.log('Proton link clicked!');
+        e.preventDefault();
+        e.stopPropagation();
+        const { shell } = require('electron');
+        shell.openExternal('https://github.com/GloriousEggroll/proton-ge-custom#installation');
+      };
+    }
+  };
+  
+  // ʕ ◕ᴥ◕ ʔ✿ Set up buttons immediately ✿ ʕ ◕ᴥ◕ ʔ
+  await setupButtons();
+  
+  // ʕノ•ᴥ•ʔノ✿ Click outside modal content to close ✿ ʕノ•ᴥ•ʔノ
+  modal.onclick = async (e) => {
+    // Only close if clicking the modal background (not the content inside)
+    if (e.target === modal) {
+      await closeModal();
+    }
+  };
+}
+
+async function closeModal() {
+  const modal = document.getElementById('custom-modal');
+  if (modal) {
+    modal.remove();
+  }
+  
+  // ʕ •ᴥ•ʔ✿ Also remove any status messages when closing ✿ ʕ •ᴥ•ʔ
+  const status = document.getElementById('status');
+  if (status && status.textContent.includes('Wine prefix')) {
+    status.style.display = 'none';
+  }
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
   // Check for launcher updates
   try {
@@ -103,7 +280,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Make body draggable except for controls
   document.body.style['-webkit-app-region'] = 'drag';
 
-  // Add custom exit button (top right)
+  // Add custom exit button (top right) - made lighter for better visibility
   const exitBtn = document.createElement('button');
   exitBtn.textContent = '✕';
   exitBtn.title = 'Close';
@@ -113,7 +290,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   exitBtn.style.width = '38px';
   exitBtn.style.height = '38px';
   exitBtn.style.fontSize = '1.5rem';
-  exitBtn.style.background = 'rgba(30,36,48,0.82)';
+  exitBtn.style.background = 'rgba(100,110,125,0.9)';
   exitBtn.style.color = '#fff';
   exitBtn.style.border = 'none';
   exitBtn.style.borderRadius = '8px';
@@ -121,7 +298,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   exitBtn.style.zIndex = '10000';
   exitBtn.style['-webkit-app-region'] = 'no-drag';
   exitBtn.onmouseover = () => exitBtn.style.background = '#a62828';
-  exitBtn.onmouseleave = () => exitBtn.style.background = 'rgba(30,36,48,0.82)';
+  exitBtn.onmouseleave = () => exitBtn.style.background = 'rgba(100,110,125,0.9)';
   exitBtn.onclick = () => {
     const { ipcRenderer } = require('electron');
     ipcRenderer.invoke('close-window');
@@ -168,11 +345,11 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 
 // Show only a Play button after patch is installed
-function showPlayButton(clientDir) {
+async function showPlayButton(clientDir) {
   // Clear all launcher content
   document.body.innerHTML = '';
 
-  // Add custom exit button (top right)
+  // Add custom exit button (top right) - made lighter for better visibility
   let exitBtn = document.getElementById('custom-exit-btn');
   if (exitBtn) exitBtn.remove();
   exitBtn = document.createElement('button');
@@ -185,7 +362,7 @@ function showPlayButton(clientDir) {
   exitBtn.style.width = '38px';
   exitBtn.style.height = '38px';
   exitBtn.style.fontSize = '1.5rem';
-  exitBtn.style.background = 'rgba(30,36,48,0.82)';
+  exitBtn.style.background = 'rgba(100,110,125,0.9)';
   exitBtn.style.color = '#fff';
   exitBtn.style.border = 'none';
   exitBtn.style.borderRadius = '8px';
@@ -193,7 +370,7 @@ function showPlayButton(clientDir) {
   exitBtn.style.zIndex = '10000';
   exitBtn.style['-webkit-app-region'] = 'no-drag';
   exitBtn.onmouseover = () => exitBtn.style.background = '#a62828';
-  exitBtn.onmouseleave = () => exitBtn.style.background = 'rgba(30,36,48,0.82)';
+  exitBtn.onmouseleave = () => exitBtn.style.background = 'rgba(100,110,125,0.9)';
   exitBtn.onclick = () => {
     const { ipcRenderer } = require('electron');
     ipcRenderer.invoke('close-window');
@@ -305,8 +482,30 @@ function showPlayButton(clientDir) {
   playBtn.style['-webkit-app-region'] = 'no-drag';
   playBtn.onmouseover = () => playBtn.style.background = '#0d2238';
   playBtn.onmouseleave = () => playBtn.style.background = '#17406d';
-  playBtn.onclick = () => {
-    ipcRenderer.invoke('launch-wowext', clientDir);
+  playBtn.onclick = async () => {
+    // ʕ •ᴥ•ʔ✿ Check if we're on Linux and need Proton setup ✿ ʕ •ᴥ•ʔ
+    const platformInfo = await ipcRenderer.invoke('get-platform-info');
+    if (platformInfo.isLinux && platformInfo.protonVersions.length === 0) {
+      const installProton = await showModal(
+        'No Proton-GE installation found!\n\n' +
+        'To play WoW on Linux, you need Proton-GE installed.\n' +
+        'Would you like to open the installation guide?'
+      );
+      if (installProton) {
+        const { shell } = require('electron');
+        shell.openExternal('https://github.com/GloriousEggroll/proton-ge-custom#installation');
+      }
+      return;
+    }
+    
+    // ʕ ◕ᴥ◕ ʔ✿ Launch with platform-appropriate method ✿ ʕ ◕ᴥ◕ ʔ
+    const result = await ipcRenderer.invoke('launch-wowext', clientDir);
+    if (!result.success) {
+      alert('Launch failed: ' + result.message);
+    } else if (platformInfo.isLinux) {
+      // ʕ ● ᴥ ●ʔ✿ Show Linux-specific success message ✿ ʕ ● ᴥ ●ʔ
+      console.log(`Launched via ${result.protonVersion || 'Proton-GE'}`);
+    }
   };
   document.body.appendChild(playBtn);
 
@@ -552,23 +751,34 @@ function showPlayButton(clientDir) {
     document.body.appendChild(addonsPanel);
   };
   document.body.appendChild(addonsBtn);
-sBtn.style.margin = '18px auto 0 auto';
-  addonsBtn.style.display = 'block';
-  addonsBtn.style.background = '#23272e';
-  addonsBtn.style.color = '#fff';
-  addonsBtn.style.border = 'none';
-  addonsBtn.style.borderRadius = '4px';
-  addonsBtn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.13)';
-  addonsBtn.style.cursor = 'pointer';
-  addonsBtn.style.fontWeight = 'bold';
-  addonsBtn.style.letterSpacing = '0.05em';
-  addonsBtn.style.transition = 'background 0.2s';
-  addonsBtn.style.zIndex = '1';
-  addonsBtn.style['-webkit-app-region'] = 'no-drag';
-  addonsBtn.onmouseover = () => addonsBtn.style.background = '#353a40';
-  addonsBtn.onmouseleave = () => addonsBtn.style.background = '#23272e';
-  // No function assigned for now
-  document.body.appendChild(addonsBtn);
+
+  // ʕ •ᴥ•ʔ✿ Add Linux settings button if on Linux ✿ ʕ •ᴥ•ʔ
+  const platformInfo = await ipcRenderer.invoke('get-platform-info');
+  if (platformInfo.isLinux) {
+    const linuxSettingsBtn = document.createElement('button');
+    linuxSettingsBtn.textContent = 'Linux Settings';
+    linuxSettingsBtn.style.fontSize = '0.9rem';
+    linuxSettingsBtn.style.width = '140px';
+    linuxSettingsBtn.style.height = '32px';
+    linuxSettingsBtn.style.marginTop = '8px';
+    linuxSettingsBtn.style.background = '#2d5c3e';
+    linuxSettingsBtn.style.color = '#fff';
+    linuxSettingsBtn.style.border = 'none';
+    linuxSettingsBtn.style.borderRadius = '5px';
+    linuxSettingsBtn.style.cursor = 'pointer';
+    linuxSettingsBtn.style.boxShadow = '0 2px 8px rgba(80,80,80,0.08)';
+    linuxSettingsBtn.style['-webkit-app-region'] = 'no-drag';
+    linuxSettingsBtn.onmouseover = () => linuxSettingsBtn.style.background = '#234a32';
+    linuxSettingsBtn.onmouseleave = () => linuxSettingsBtn.style.background = '#2d5c3e';
+    linuxSettingsBtn.onclick = async () => {
+      try {
+        await showLinuxSettings(clientDir);
+      } catch (error) {
+        console.error('Error in Linux Settings:', error);
+      }
+    };
+    document.body.appendChild(linuxSettingsBtn);
+  }
 }
 
 
@@ -624,15 +834,14 @@ sBtn.style.margin = '18px auto 0 auto';
         // Reload config to get updated hash and state
         config = await ipcRenderer.invoke('load-config');
         // Now check for wowext.exe and show play button if present
-        const fs = require('fs');
-        const path = require('path');
-        const wowExtExe = path.join(config.clientDir, 'wowext.exe');
-        if (fs.existsSync(wowExtExe)) {
+        const executables = await ipcRenderer.invoke('get-wow-executables', config.clientDir);
+        const hasWowExt = executables.some(exe => exe.name.toLowerCase().includes('wowext.exe'));
+        if (hasWowExt) {
           showStatus('WoW client detected. Ready to launch Synastria!');
           hideProgress();
           mainActions.style.display = 'none';
           clientDetected = true;
-          showPlayButton(config.clientDir);
+          await showPlayButton(config.clientDir);
           return;
         }
       }
@@ -655,30 +864,39 @@ sBtn.style.margin = '18px auto 0 auto';
       const chosenDir = result[0];
       const isValid = await ipcRenderer.invoke('validate-wow-dir', chosenDir);
       if (!isValid) {
-        alert('Selected directory does not contain wow.exe or wowext.exe. Please select a valid WoW client folder.');
+        const platformInfo = await ipcRenderer.invoke('get-platform-info');
+        const message = platformInfo.isLinux 
+          ? 'Selected directory does not contain wow.exe or wowext.exe. On Linux, you need the Windows WoW client files to run via Proton-GE.'
+          : 'Selected directory does not contain wow.exe or wowext.exe. Please select a valid WoW client folder.';
+        alert(message);
         return;
       }
       await ipcRenderer.invoke('save-config', { installed: true, clientDir: chosenDir });
-      const fs = require('fs');
-      const path = require('path');
-      const wowExe = path.join(chosenDir, 'wow.exe');
-      const wowExtExe = path.join(chosenDir, 'wowext.exe');
-      if (fs.existsSync(wowExe) && !fs.existsSync(wowExtExe)) {
+      
+      // ʕ •ᴥ•ʔ✿ Get platform-aware executable info ✿ ʕ •ᴥ•ʔ
+      const platformInfo = await ipcRenderer.invoke('get-platform-info');
+      const executables = await ipcRenderer.invoke('get-wow-executables', chosenDir);
+      
+      const hasWow = executables.some(exe => exe.name.toLowerCase().includes('wow.exe'));
+      const hasWowExt = executables.some(exe => exe.name.toLowerCase().includes('wowext.exe'));
+      
+      if (hasWow && !hasWowExt) {
         showStatus('wowext.exe not found. Downloading patch...');
         try {
           const result = await ipcRenderer.invoke('download-and-install-patch', chosenDir);
           console.log('Patch download result:', result);
           showStatus(result.message);
           if (result.success) {
-            showPlayButton(chosenDir);
+            await showPlayButton(chosenDir);
           }
         } catch (err) {
           showStatus('Error downloading patch: ' + err.message);
         }
         mainActions.style.display = 'none';
       } else {
-        showStatus('Existing WoW client directory saved! Ready to launch Synastria.');
+        showStatus('WoW client detected! Launching interface...');
         mainActions.style.display = 'none';
+        await showPlayButton(chosenDir);
       }
     }
   };
@@ -726,7 +944,7 @@ sBtn.style.margin = '18px auto 0 auto';
                   console.log('Patch download result:', result);
                   showStatus(result.message);
                   if (result.success) {
-                    showPlayButton(destDir);
+                    await showPlayButton(destDir);
                   }
                 } catch (err) {
                   showStatus('Error downloading patch: ' + err.message);

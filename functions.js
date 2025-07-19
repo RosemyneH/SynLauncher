@@ -3,6 +3,7 @@ const path = require('path');
 const WebTorrent = require('webtorrent');
 const extract = require('extract-zip');
 const constants = require('./constants');
+const PlatformUtils = require('./platform');
 
 function configExists() {
   return fs.existsSync(constants.CONFIG_FILE);
@@ -41,10 +42,7 @@ function downloadClientTorrent(magnet, destPath, onProgress, onDone) {
 }
 
 function isValidWoWDir(dir) {
-  return (
-    fs.existsSync(path.join(dir, 'wow.exe')) ||
-    fs.existsSync(path.join(dir, 'wowext.exe'))
-  );
+  return PlatformUtils.isValidWoWDir(dir);
 }
 
 /**
@@ -84,20 +82,14 @@ async function extractClient(zipPath, destPath, onMoveProgress) {
   await fsp.rmdir(subfolder);
 
   // Verify wow.exe or wowext.exe is present, then remove zip
-  const wowExe = path.join(destPath, 'wow.exe');
-  const wowExtExe = path.join(destPath, 'wowext.exe');
-  try {
-    const wowExists = await fsp.stat(wowExe).then(stat => stat.isFile()).catch(() => false);
-    const wowExtExists = await fsp.stat(wowExtExe).then(stat => stat.isFile()).catch(() => false);
-    if (wowExists || wowExtExists) {
-      try {
-        await fsp.unlink(zipPath);
-      } catch (err) {
-        // Log or ignore error if unable to remove zip
-      }
+  const PlatformUtils = require('./platform');
+  const executables = PlatformUtils.getWoWExecutables(destPath);
+  if (executables.length > 0) {
+    try {
+      await fsp.unlink(zipPath);
+    } catch (err) {
+      // Log or ignore error if unable to remove zip
     }
-  } catch (err) {
-    // Ignore errors
   }
 }
 

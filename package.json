@@ -2,15 +2,55 @@
   "name": "synastria-launcher",
   "version": "1.2.3",
   "main": "main.js",
-  "description": "Simple Electron launcher for Synastria WoW",
+  "description": "Cross-platform Electron launcher for Synastria WoW with Linux and Proton-GE support",
+  "author": {
+    "name": "Synastria Team",
+    "email": "dev@synastria.org"
+  },
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder",
+    "dist-linux": "electron-builder --linux",
+    "dist-win": "electron-builder --win",
     "package-win": "electron-packager . SynastriaLauncher --platform=win32 --arch=x64 --out=release-build --overwrite",
+    "package-linux": "electron-packager . SynastriaLauncher --platform=linux --arch=x64 --out=release-build --overwrite",
     "publish": "electron-builder --publish always"
   },
   "build": {
     "appId": "com.synastria.synastrialauncher",
+    "productName": "Synastria Launcher",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!release-build/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        },
+        {
+          "target": "rpm",
+          "arch": ["x64"]
+        }
+      ],
+      "category": "Game"
+    },
     "publish": [
       {
         "provider": "github",
